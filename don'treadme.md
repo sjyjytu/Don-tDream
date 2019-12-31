@@ -28,3 +28,27 @@
 ### 提示
 
 代码在code里，想下下来玩的话要注意相对路径，应该把code里的文件拖出来，和obj、tex、skybox在同一目录下。还有obj里面的模型我没上传，太大了~~
+
+
+
+### 记录
+
+- VC字符集：
+
+  - unicode
+  - 多字节字符集
+
+  在属性-高级-字符集里改，用unicode的话，代码里要把char都换成TCHAR，"haha"->L"haha"
+
+- 聚光灯的光源貌似要放在视点后面，才能起作用
+
+
+
+### 素材
+
+3D模型：[爱给网](http://www.aigei.com/) 用QQ号可以注册，新注册用户送50个币，下一个模型要15-45个币左右。
+
+天空盒子：
+
+- [Skyboxes](http://www.custommapmakers.org/skyboxes.php) 这个网站下下来的图片是tga格式的
+- [humus](http://www.humus.name) 这个网站是一张图片的盒子，在Texture里
