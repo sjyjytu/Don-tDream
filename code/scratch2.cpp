@@ -96,6 +96,53 @@ GLuint normalisationCubeMap;
 
 VECTOR3D worldLightPosition = VECTOR3D(10.0f, 10.0f, 10.0f);
 
+bool stop = 0;
+bool fog = 0;
+bool fogHold = 0;
+int fogCounter = 0;
+bool fogDismiss = 0;
+//辛苦调的一些参数
+float fcStart = 0.0f;
+float fcEnd = 40.0f;
+float fcSEChangeV = 0.01f;
+float bookTranslateX = 0.67f;
+float bookTranslateY = 1.0f;
+float bookMove = 0.01f;
+float bookCoverScaleX = 1.37f;
+float bookCoverScaleY = 1.0f;
+float bookCoverScale = 0.1f;
+float bookRotate = -1;
+float bookRotateV = 0.1f;
+
+//书飞入场景
+spline* bookPath;
+
+void genBookPath()
+{
+	point *p = new point[20];
+	float tx = 6;
+	float ty = 10;
+	p[0].setPoint(-0.8 * tx, -0.565 * ty);
+	p[1].setPoint(-0.585 * tx, -0.15 * ty);
+	p[2].setPoint(-0.37 * tx, 0.095 * ty);
+	p[3].setPoint(-0.155 * tx, 0.205 * ty);
+	p[4].setPoint(0.14 * tx, 0.28 * ty);
+	p[5].setPoint(0.51 * tx, 0.29 * ty);
+	p[6].setPoint(0.675 * tx, 0.175 * ty);
+	p[7].setPoint(0.78 * tx, -0.07 * ty);
+	p[8].setPoint(0.625 * tx, -0.35 * ty);
+	p[9].setPoint(0.24 * tx, -0.35 * ty);
+	p[10].setPoint(-0.005 * tx, -0.265 * ty);
+	p[11].setPoint(-0.08 * tx, -0.035 * ty);
+	p[12].setPoint(0.13 * tx, 0.115 * ty);
+	p[13].setPoint(0.295 * tx, 0.06 * ty);
+	p[14].setPoint(0.32 * tx, -0.09 * ty);
+	p[15].setPoint(0.20 * tx, -0.03 * ty);
+	p[16].setPoint(0.10 * tx, 0.02 * ty);
+	p[17].setPoint(0.0 * tx, 0.0 * ty);
+	bookPath = new spline(p, 18, 18, 0.6);
+}
+
 void displayBookCover()
 {
 	//Get the inverse model matrix
@@ -225,22 +272,12 @@ void displayBookCover()
 	/*glFinish();
 	glutSwapBuffers();*/
 }
-bool stop = 0;
-bool fog = 0;
-bool fogHold = 0;
-int fogCounter = 0;
-bool fogDismiss = 0;
-float fcStart = 0.0f;
-float fcEnd = 40.0f;
-float fcSEChangeV = 0.01f;
-float bookTranslateX = 0.67f;
-float bookTranslateY = 1.0f;
-float bookMove = 0.01f;
-float bookCoverScaleX = 1.37f;
-float bookCoverScaleY = 1.0f;
-float bookCoverScale = 0.1f;
-float bookRotate = -1;
-float bookRotateV = 0.1f;
+float bookAngle = 0.0f;
+float bookOmega = 1.0f;
+int bookPos = 0;
+int bookPosCounter = 0;
+int bookPathSize;
+const int posPerAngle = 2;
 void myDisplay()
 {
 
@@ -301,15 +338,32 @@ void myDisplay()
 		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
 		glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
 		glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
-		glPushMatrix();
+		glPushMatrix();  //1
 		glTranslated(-0.5f, -1, -8);
+		if (bookPos <= bookPathSize)
+		{
+			bookPosCounter++;
+			if (bookPosCounter == posPerAngle)
+			{
+				bookPos += 1;
+				bookPosCounter = 0;
+			}
+			//飞入画面
+			glTranslatef(bookPath->getX(bookPos), 0.0, bookPath->getY(bookPos));
+			glRotatef((bookPos * posPerAngle + bookPosCounter) * 1.5f + 156, 0, 0, 1);
+		}
+		else
+		{
+			fog = 1;
+		}
+		
 		//画书封面
-		glPushMatrix();
+		glPushMatrix();  //2
 		glScaled(bookCoverScaleX, bookCoverScaleY, 1);
 		displayBookCover();
-		glPopMatrix();
+		glPopMatrix();  //2
 		//画书体
-		glPushMatrix();
+		glPushMatrix();  //3
 		glTranslatef(bookTranslateX, bookTranslateY, 0.0);
 		glRotatef(90, 0, 1, 0);
 		glRotatef(bookRotate, 1, 0, 0);
@@ -317,8 +371,8 @@ void myDisplay()
 		glBindTexture(GL_TEXTURE_2D, texture[2]);
 		book.drawMesh();
 		glDisable(GL_TEXTURE_2D);
-		glPopMatrix();
-		glPopMatrix();
+		glPopMatrix();  //3
+		glPopMatrix();  //1
 
 		/*flash_count++;
 		if (flash_count > 10000)
@@ -734,6 +788,10 @@ void Key(unsigned char key, int x, int y)
 	case 'k':// 下103
 		bookCoverScaleY -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
 		break;
+	case '.':
+		bookPosCounter++;
+		cout << bookPos <<"; "<<bookPath->getX(bookPos) << ", " << bookPath->getY(bookPos) <<", "<< int((bookPos* posPerAngle + bookPosCounter) * 1.5f)%360  << endl;
+		break;
 	default:
 		break;
 	}
@@ -813,6 +871,9 @@ particle3d* init_block(float x, float y, float z)
 
 void initBook(void)
 {
+	//Generate Book Path
+	genBookPath();
+	bookPathSize = bookPath->size();
 	//Check for and set up extensions
 	if (!SetUpARB_multitexture() || !SetUpARB_texture_cube_map() ||
 		!SetUpARB_texture_env_combine() || !SetUpARB_texture_env_dot3())
