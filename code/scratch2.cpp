@@ -51,9 +51,10 @@ float angle = 0.0f;
 
 butterflyManager* butt;
 
+float speed = 1.0f;
 float eyex, eyey, eyez, lookx, looky, lookz;
 
-bool drawSkyBox = 1, drawBook = 1, drawButt = 0, drawRoom = 0, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
+bool drawSkyBox = 1, drawBook = 0, drawButt = 1, drawRoom = 0, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
 
 bool torch_on = 0; //手电筒
 
@@ -73,12 +74,13 @@ float bombY = 3.0f, bombZ = 12.0f, spinX = 45;
 float bombVy = 0.05f, bombAy = -0.001f, bombVz = -0.08f, spinVx = -1;
 
 int flash_count = 0;
+int butt_count = 0;
 float full_light = 1.0f;
 
 //书的光照变化
 float light2_diffuse[] = { 5,5,5 };
 float light2_specular[] = { 10,10,10 };
-float light2_pos[] = { 0, 3, -2, 0.0f };
+float light2_pos[] = { 0, 3, 2, 0.0f };
 
 //book bump mapping
 //Our book
@@ -104,7 +106,7 @@ bool fogDismiss = 0;
 //辛苦调的一些参数
 float fcStart = 0.0f;
 float fcEnd = 40.0f;
-float fcSEChangeV = 0.01f;
+float fcSEChangeV = 0.03f;
 float bookTranslateX = 0.67f;
 float bookTranslateY = 1.0f;
 float bookMove = 0.01f;
@@ -335,9 +337,9 @@ void myDisplay()
 
 	if (drawBook)
 	{
-		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
+		/*glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
 		glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
-		glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
+		glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);*/
 		glPushMatrix();  //1
 		glTranslated(-0.5f, -1, -8);
 		if (bookPos <= bookPathSize)
@@ -351,6 +353,18 @@ void myDisplay()
 			//飞入画面
 			glTranslatef(bookPath->getX(bookPos), 0.0, bookPath->getY(bookPos));
 			glRotatef((bookPos * posPerAngle + bookPosCounter) * 1.5f + 156, 0, 0, 1);
+		}
+		else if (flash_count < 300)
+		{
+			flash_count++;
+		}
+		else if (flash_count < 1200)
+		{
+			flash_count++;
+			float fc = flash_count / 1200.0f;
+			glEnable(GL_FOG);
+			GLfloat fogColor[] = { fc, fc, fc, 0.0 };
+			glFogfv(GL_FOG_COLOR, fogColor);
 		}
 		else
 		{
@@ -383,21 +397,28 @@ void myDisplay()
 
 	if (drawButt)
 	{
-		AngleXZ -= 0.005f;
-		look[0] = eye[0] + 100 * COS(AngleXZ);
-		look[2] = eye[2] + 100 * SIN(AngleXZ);
-		glPushMatrix();
-		glTranslated(-0.5f, -1, -8);
-		glEnable(GL_BLEND);
-		butt->show();
-		glDisable(GL_BLEND);
-		glPopMatrix();
-		/*if (flash_count == 10005)
+		butt_count++;
+		if (butt_count<4000)
 		{
-			glEnable(GL_FOG);
-		}*/
-		//用环境光变暗来实现消失在迷雾中
-		if (flash_count > 20000)
+
+		}
+		else if (butt_count < 6000)
+		{
+			AngleXZ -= 0.005f;
+			look[0] = eye[0] + 100 * COS(AngleXZ);
+			look[2] = eye[2] + 100 * SIN(AngleXZ);
+		}
+		else if (butt_count < 15000)
+		{
+			//cout << butt_count << endl;
+			AngleXZ -= 0.005f;
+			eye[2] += SIN(AngleXZ) * speed * 0.0003f;
+			eye[0] += COS(AngleXZ) * speed * 0.0003f;
+			look[0] = eye[0] + 100 * COS(AngleXZ);
+			look[2] = eye[2] + 100 * SIN(AngleXZ);
+		}
+		//用环境光变暗来实现转场
+		else if (butt_count < 25000)
 		{
 			//由1变0
 			full_light -= 0.0001f;
@@ -412,21 +433,31 @@ void myDisplay()
 			glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
 			glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
 		}
-		if (flash_count == 30000)
+		else
 		{
 			//glDisable(GL_LIGHT2);
 			drawBook = 0;
 			drawSkyBox = 0;
 			drawButt = 0;
 			AngleXZ = -90;
+			eye[0] = 0;
+			eye[1] = 0;
+			eye[2] = 0;
 			look[0] = eye[0] + 100 * COS(AngleXZ);
 			look[2] = eye[2] + 100 * SIN(AngleXZ);
 			buttToRoom = 1;
 			drawRoom = 1;
 			drawSward = 1;
 			flash_count = 0;
-			//还应加入消失在迷雾中
 		}
+		glPushMatrix();
+		glTranslated(-0.5f, -1, -8);
+		glEnable(GL_BLEND);
+		butt->show();
+		glDisable(GL_BLEND);
+		glPopMatrix();
+		
+		
 	}
 
 	if (buttToRoom)
@@ -799,7 +830,6 @@ void Key(unsigned char key, int x, int y)
 
 void specialKey(int key, int xx, int yy)
 {
-	float speed = 1.0f;
 	// cout << key;
 	switch (key)
 	{
@@ -996,12 +1026,8 @@ void myInit()
 
 	//迷雾
 	// 启用雾化功能-----------------
-	//glEnable(GL_FOG);
-	//GLfloat fogColor[] = { fc, fc, fc, 0.0 };
-	GLfloat fogColor[] = { 1, 1, 1, 0.0 };
 	//glFogi(GL_FOG_MODE, GL_EXP2  /*GL_EXP	GL_EXP2	GL_LINEAR*/);
 	glFogi(GL_FOG_MODE, GL_LINEAR  /*GL_EXP	GL_EXP2	GL_LINEAR*/);
-	glFogfv(GL_FOG_COLOR, fogColor);
 	glFogf(GL_FOG_DENSITY, 0.15f);
 	glFogf(GL_FOG_START, fcStart);
 	glFogf(GL_FOG_END, fcEnd);
