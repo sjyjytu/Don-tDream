@@ -45,7 +45,7 @@ float	    look[3] = { eye[0] + 100 * COS(AngleXZ),
 						eye[1] + AngleYZ,
 						eye[2] + 100 * SIN(AngleXZ) };	                        //目标点
 
-GLuint texture[10];
+GLuint texture[20];
 
 float angle = 0.0f;
 
@@ -54,7 +54,7 @@ butterflyManager* butt;
 float speed = 1.0f;
 float eyex, eyey, eyez, lookx, looky, lookz;
 
-bool drawSkyBox = 1, drawBook = 0, drawButt = 1, drawRoom = 0, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
+bool drawSkyBox = 1, drawBook = 1, drawButt = 0, drawRoom = 0, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
 
 bool torch_on = 0; //手电筒
 
@@ -80,7 +80,11 @@ float full_light = 1.0f;
 //书的光照变化
 float light2_diffuse[] = { 5,5,5 };
 float light2_specular[] = { 10,10,10 };
-float light2_pos[] = { 0, 3, 2, 0.0f };
+//float light2_pos[] = { 10, 10, -10, 1.0f };
+float light2_pos[] = { -10, 0, 20, 1 };
+float flash_V = -0.4f;
+bool drawLightning = 0;
+bool recoverLight2 = 0;
 
 //book bump mapping
 //Our book
@@ -96,7 +100,8 @@ GLuint decalTexture;
 //Normalisation cube map
 GLuint normalisationCubeMap;
 
-VECTOR3D worldLightPosition = VECTOR3D(10.0f, 10.0f, 10.0f);
+//VECTOR3D worldLightPosition = VECTOR3D(10.0f, 10.0f, 10.0f);
+VECTOR3D worldLightPosition = VECTOR3D(light2_pos[0], light2_pos[1], light2_pos[2]);
 
 bool stop = 0;
 bool fog = 0;
@@ -269,7 +274,8 @@ void displayBookCover()
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	//Disable blending if it is enabled
-	glBlendFunc(GL_ONE, GL_ONE);  //return to default
+	//glBlendFunc(GL_ONE, GL_ONE);  //return to default
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);  //return to default
 	glDisable(GL_BLEND);
 	/*glFinish();
 	glutSwapBuffers();*/
@@ -280,6 +286,39 @@ int bookPos = 0;
 int bookPosCounter = 0;
 int bookPathSize;
 const int posPerAngle = 2;
+
+void displayLightning()
+{
+	float high = 8;
+	float width = 5;
+	glEnable(GL_BLEND);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, texture[10]);
+	glPushMatrix();
+	//让闪电随机动起来
+	glTranslatef((rand() % 50 - 25) / 50.0f, (rand() % 50 - 25) / 50.0f, (rand() % 50 - 25) / 5.0f);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0, 0);
+	glNormal3f(0, 0, 1);
+	glVertex3f(-width, 0, -3);
+
+	glTexCoord2f(0, 1);
+	glNormal3f(0, 0, 1);
+	glVertex3f(-width, high, -3);
+
+	glTexCoord2f(1, 1);
+	glNormal3f(0, 0, 1);
+	glVertex3f(width, high, -3);
+
+	glTexCoord2f(1, 0);
+	glNormal3f(0, 0, 1);
+	glVertex3f(width, 0, -3);
+	glEnd();
+	glPopMatrix();
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
+}
+
 void myDisplay()
 {
 
@@ -335,18 +374,36 @@ void myDisplay()
 		glDisable(GL_TEXTURE_2D);
 	}
 
+	if (drawLightning)
+	{
+		//电闪雷鸣
+		for (int i = 0; i < 3; i++)
+		{
+			light2_diffuse[i] += flash_V;
+			light2_specular[i] += 2 * flash_V;
+		}
+		if (light2_diffuse[0] < 0 || light2_diffuse[0] > 5)
+		{
+			flash_V = -flash_V;
+		}
+		glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
+		glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
+	}
+
 	if (drawBook)
 	{
-		/*glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
-		glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
-		glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);*/
 		glPushMatrix();  //1
 		glTranslated(-0.5f, -1, -8);
 		if (bookPos <= bookPathSize)
 		{
+			//闪电
+			drawLightning = 1;
+
+			//书旋转轨迹
 			bookPosCounter++;
 			if (bookPosCounter == posPerAngle)
 			{
+				displayLightning();
 				bookPos += 1;
 				bookPosCounter = 0;
 			}
@@ -354,20 +411,23 @@ void myDisplay()
 			glTranslatef(bookPath->getX(bookPos), 0.0, bookPath->getY(bookPos));
 			glRotatef((bookPos * posPerAngle + bookPosCounter) * 1.5f + 156, 0, 0, 1);
 		}
-		else if (flash_count < 300)
+		else if (flash_count < 900)
 		{
+			//书停，闪电息，雾渐起
+			drawLightning = 0;
+			recoverLight2 = 1;
 			flash_count++;
-		}
-		else if (flash_count < 1200)
-		{
-			flash_count++;
-			float fc = flash_count / 1200.0f;
-			glEnable(GL_FOG);
-			GLfloat fogColor[] = { fc, fc, fc, 0.0 };
-			glFogfv(GL_FOG_COLOR, fogColor);
+			if (flash_count >= 300)
+			{
+				float fc = flash_count / 900.0f;
+				glEnable(GL_FOG);
+				GLfloat fogColor[] = { fc, fc, fc, 0.0 };
+				glFogfv(GL_FOG_COLOR, fogColor);
+			}
 		}
 		else
 		{
+			//雾渐浓
 			fog = 1;
 		}
 		
@@ -388,11 +448,17 @@ void myDisplay()
 		glPopMatrix();  //3
 		glPopMatrix();  //1
 
-		/*flash_count++;
-		if (flash_count > 10000)
+		if (recoverLight2)
 		{
-			drawButt = 1;
-		}*/
+			//光复
+			for (int i = 0; i < 3; i++)
+			{
+				light2_diffuse[i] = 5;
+				light2_specular[i] = 10;
+			}
+			glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
+			glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
+		}
 	}
 
 	if (drawButt)
@@ -483,6 +549,7 @@ void myDisplay()
 		glBindTexture(GL_TEXTURE_2D, texture[9]);
 		glPushMatrix();
 		glTranslatef(0.0, -3, -10);
+		float high = 12;
 		//画左面
 		glBegin(GL_QUADS);
 		glTexCoord2f(0, 0);
@@ -491,11 +558,11 @@ void myDisplay()
 
 		glTexCoord2f(0, 1);
 		glNormal3f(1, 0, 0);
-		glVertex3f(-5, 10, 10);
+		glVertex3f(-5, high, 10);
 
 		glTexCoord2f(1, 1);
 		glNormal3f(1, 0, 0);
-		glVertex3f(-5, 10, -5);
+		glVertex3f(-5, high, -5);
 
 		glTexCoord2f(1, 0);
 		glNormal3f(1, 0, 0);
@@ -508,11 +575,11 @@ void myDisplay()
 
 		glTexCoord2f(0, 1);
 		glNormal3f(-1, 0, 0);
-		glVertex3f(5, 10, 10);
+		glVertex3f(5, high, 10);
 
 		glTexCoord2f(1, 1);
 		glNormal3f(-1, 0, 0);
-		glVertex3f(5, 10, -5);
+		glVertex3f(5, high, -5);
 
 		glTexCoord2f(1, 0);
 		glNormal3f(-1, 0, 0);
@@ -525,11 +592,11 @@ void myDisplay()
 
 		glTexCoord2f(0, 1);
 		glNormal3f(0, 0, 1);
-		glVertex3f(-5, 10, -5);
+		glVertex3f(-5, high, -5);
 
 		glTexCoord2f(1, 1);
 		glNormal3f(0, 0, 1);
-		glVertex3f(5, 10, -5);
+		glVertex3f(5, high, -5);
 
 		glTexCoord2f(1, 0);
 		glNormal3f(0, 0, 1);
@@ -561,10 +628,14 @@ void myDisplay()
 	{
 		float y = AngleYZ / 180.0f;
 		glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 60);
-		GLfloat spot_pos[] = { eye[0] - COS(AngleXZ), -y, eye[2] - SIN(AngleXZ), 0.0f };
+		/*GLfloat spot_pos[] = { eye[0] - COS(AngleXZ), -y, eye[2] - SIN(AngleXZ), 0.0f };
 		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
 		GLfloat  spot_direction[] = { 100 * COS(AngleXZ),y - 3, 100 * SIN(AngleXZ) };
-		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
+		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);*/
+		GLfloat spot_pos[] = { eye[0], eye[1], eye[2], 1.0f };
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		//GLfloat  spot_direction[] = { 100 * COS(AngleXZ),y - 3, 100 * SIN(AngleXZ) };
+		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, look);
 		glEnable(GL_LIGHT0);
 	}
 	else
@@ -706,123 +777,143 @@ void Key(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
-	/*case ' ':
+	case ' ':
 		torch_on = !torch_on;
 		break;
-	case 'b':
-		drawBomb = 1;
-		break;
-	case 'g':
-		drawBook = 1;
-		break;
-	case 's':
-		drawSkyBox = !drawSkyBox;
-		break;
-	case 'p':
-		stop = !stop;
-		break;
-	case 'f':
-		fog = !fog;
-		if (fog)
-		{
-			glEnable(GL_FOG);
-		}
-		else
-		{
-			glDisable(GL_FOG);
-		}
-		break;*/
-	case 'a': // 左100
-		bookTranslateX -= bookMove;
-		cout << bookTranslateX << ", " << bookTranslateY << endl;
+	//case 'b':
+	//	drawBomb = 1;
+	//	break;
+	//case 'g':
+	//	drawBook = 1;
+	//	break;
+	//case 's':
+	//	drawSkyBox = !drawSkyBox;
+	//	break;
+	//case 'p':
+	//	stop = !stop;
+	//	break;
+	//case 'f':
+	//	fog = !fog;
+	//	if (fog)
+	//	{
+	//		glEnable(GL_FOG);
+	//	}
+	//	else
+	//	{
+	//		glDisable(GL_FOG);
+	//	}
+	//	break;
+	case 'a': // 移动light2
+		light2_pos[0] -= 0.5f;
+		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
+		cout << "pos: " << light2_pos[0] <<", "<< light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
 		break;
 	case 'd':// 右102
-		bookTranslateX += bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
+		light2_pos[0] += 0.5f;
+		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
+		cout << "pos: " << light2_pos[0] << ", " << light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
 		break;
 	case 'w':// 上101
-		bookTranslateY += bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
+		light2_pos[1] -= 0.5f;
+		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
+		cout << "pos: " << light2_pos[0] << ", " << light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
 		break;
 	case 's':// 下103
-		bookTranslateY -= bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
+		light2_pos[1] += 0.5f;
+		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
+		cout << "pos: " << light2_pos[0] << ", " << light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
 		break;
-	case 'q':// 上101
-		bookRotate += bookRotateV; cout << bookRotate << endl;
-		break;
-	case 'e':// 下103
-		bookRotate -= bookRotateV; cout << bookRotate << endl;
-		break;
-	case '1':
-		fcStart -= fcSEChangeV;
-		cout << fcStart << "  " << fcEnd << endl;
-		glFogf(GL_FOG_START, fcStart);
-		glFogf(GL_FOG_END, fcEnd);
-		break;
-	case '2':
-		fcStart += fcSEChangeV;
-		cout << fcStart << "  " << fcEnd << endl;
-		glFogf(GL_FOG_START, fcStart);
-		glFogf(GL_FOG_END, fcEnd);
-		break;
-	case '3':
-		fcEnd -= fcSEChangeV;
-		cout << fcStart << "  " << fcEnd << endl;
-		glFogf(GL_FOG_START, fcStart);
-		glFogf(GL_FOG_END, fcEnd);
-		break;
-	case '4':
-		fcEnd += fcSEChangeV;
-		glFogf(GL_FOG_START, fcStart);
-		glFogf(GL_FOG_END, fcEnd);
-		cout << fcStart << "  " << fcEnd << endl;
-		break;
-	case '5':
-		fcSEChangeV *= 2;
-		cout << fcSEChangeV<< endl;
-		break;
-	case '6':
-		fcSEChangeV /= 2;
-		cout << fcSEChangeV<< endl;
-		break;
-	case '7':
-		bookMove += 0.1f;
-		cout << bookMove << endl;
-		break;
-	case '8':
-		bookMove -= 0.1f;
-		cout << bookMove << endl;
-		break;
-	case '9':
-		bookCoverScale *= 10;
-		cout << bookCoverScale << endl;
-		break;
-	case '0':
-		bookCoverScale *= 0.1f;
-		cout << bookCoverScale << endl;
-		break;
-	case '-':
-		bookRotateV *= 0.1f;
-		cout << bookRotateV << endl;
-		break;
-	case '=':
-		bookRotateV *= 10.0f;
-		cout << bookRotateV << endl;
-		break;
-	case 'j': // 左100
-		bookCoverScaleX -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-		break;
-	case 'l':// 右102
-		bookCoverScaleX += bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-		break;
-	case 'i':// 上101
-		bookCoverScaleY += bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-		break;
-	case 'k':// 下103
-		bookCoverScaleY -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-		break;
-	case '.':
-		bookPosCounter++;
-		cout << bookPos <<"; "<<bookPath->getX(bookPos) << ", " << bookPath->getY(bookPos) <<", "<< int((bookPos* posPerAngle + bookPosCounter) * 1.5f)%360  << endl;
-		break;
+	//case 'a': // 左100
+	//	bookTranslateX -= bookMove;
+	//	cout << bookTranslateX << ", " << bookTranslateY << endl;
+	//	break;
+	//case 'd':// 右102
+	//	bookTranslateX += bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
+	//	break;
+	//case 'w':// 上101
+	//	bookTranslateY += bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
+	//	break;
+	//case 's':// 下103
+	//	bookTranslateY -= bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
+	//	break;
+	//case 'q':// 上101
+	//	bookRotate += bookRotateV; cout << bookRotate << endl;
+	//	break;
+	//case 'e':// 下103
+	//	bookRotate -= bookRotateV; cout << bookRotate << endl;
+	//	break;
+	//case '1':
+	//	fcStart -= fcSEChangeV;
+	//	cout << fcStart << "  " << fcEnd << endl;
+	//	glFogf(GL_FOG_START, fcStart);
+	//	glFogf(GL_FOG_END, fcEnd);
+	//	break;
+	//case '2':
+	//	fcStart += fcSEChangeV;
+	//	cout << fcStart << "  " << fcEnd << endl;
+	//	glFogf(GL_FOG_START, fcStart);
+	//	glFogf(GL_FOG_END, fcEnd);
+	//	break;
+	//case '3':
+	//	fcEnd -= fcSEChangeV;
+	//	cout << fcStart << "  " << fcEnd << endl;
+	//	glFogf(GL_FOG_START, fcStart);
+	//	glFogf(GL_FOG_END, fcEnd);
+	//	break;
+	//case '4':
+	//	fcEnd += fcSEChangeV;
+	//	glFogf(GL_FOG_START, fcStart);
+	//	glFogf(GL_FOG_END, fcEnd);
+	//	cout << fcStart << "  " << fcEnd << endl;
+	//	break;
+	//case '5':
+	//	fcSEChangeV *= 2;
+	//	cout << fcSEChangeV<< endl;
+	//	break;
+	//case '6':
+	//	fcSEChangeV /= 2;
+	//	cout << fcSEChangeV<< endl;
+	//	break;
+	//case '7':
+	//	bookMove += 0.1f;
+	//	cout << bookMove << endl;
+	//	break;
+	//case '8':
+	//	bookMove -= 0.1f;
+	//	cout << bookMove << endl;
+	//	break;
+	//case '9':
+	//	bookCoverScale *= 10;
+	//	cout << bookCoverScale << endl;
+	//	break;
+	//case '0':
+	//	bookCoverScale *= 0.1f;
+	//	cout << bookCoverScale << endl;
+	//	break;
+	//case '-':
+	//	bookRotateV *= 0.1f;
+	//	cout << bookRotateV << endl;
+	//	break;
+	//case '=':
+	//	bookRotateV *= 10.0f;
+	//	cout << bookRotateV << endl;
+	//	break;
+	//case 'j': // 左100
+	//	bookCoverScaleX -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
+	//	break;
+	//case 'l':// 右102
+	//	bookCoverScaleX += bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
+	//	break;
+	//case 'i':// 上101
+	//	bookCoverScaleY += bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
+	//	break;
+	//case 'k':// 下103
+	//	bookCoverScaleY -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
+	//	break;
+	//case '.':
+	//	bookPosCounter++;
+	//	cout << bookPos <<"; "<<bookPath->getX(bookPos) << ", " << bookPath->getY(bookPos) <<", "<< int((bookPos* posPerAngle + bookPosCounter) * 1.5f)%360  << endl;
+	//	break;
 	default:
 		break;
 	}
@@ -1014,7 +1105,8 @@ void myInit()
 	//glLightfv(GL_LIGHT1, GL_AMBIENT, dimwhite);
 	glLightfv(GL_LIGHT1, GL_SPECULAR, light1_specular);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, light1_specular);
-
+	//双面光照
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	glEnable(GL_LIGHTING);
 	// 指定全局环境光的RGBA强度值,照亮书和蝴蝶，后面可以换成光源，让字体发光
 	GLfloat ambientLight[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -1022,6 +1114,7 @@ void myInit()
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLight);
 
 	//Set up light
+	glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
 	glEnable(GL_LIGHT2);
 
 	//迷雾
@@ -1066,6 +1159,10 @@ void myInit()
 	BuildTexture(filename8, texture[2]);
 	TCHAR filename9[] = L"tex\\spark.bmp";
 	BuildTexture(filename9, texture[3]);
+
+	//闪电
+	TCHAR filename10[] = L"tex\\shandian4.jpg";
+	BuildTexture(filename10, texture[10]);
 
 	bomb.readFile("obj\\new_bomb.obj");
 	fuse.readFile("obj\\new_fuse.obj");
