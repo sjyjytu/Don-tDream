@@ -54,11 +54,12 @@ butterflyManager* butt;
 float speed = 1.0f;
 float eyex, eyey, eyez, lookx, looky, lookz;
 
-bool drawSkyBox = 1, drawBook = 1, drawButt = 0, drawRoom = 0, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
+bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 1, drawStones = 1, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
 
 bool torch_on = 0; //手电筒
 
 Mesh sward;
+Mesh stone;
 Bomb bomb;
 Fuse fuse;
 Buddha buddha1;
@@ -85,6 +86,10 @@ float light2_pos[] = { -10, 0, 20, 1 };
 float flash_V = -0.4f;
 bool drawLightning = 0;
 bool recoverLight2 = 0;
+
+//手电筒
+GLfloat spot_pos[] = { 0, 0, 0, 1.0f };
+GLfloat  spot_direction[] = { 0, 0.0, -1.0 };
 
 //book bump mapping
 //Our book
@@ -409,7 +414,8 @@ void myDisplay()
 			}
 			//飞入画面
 			glTranslatef(bookPath->getX(bookPos), 0.0, bookPath->getY(bookPos));
-			glRotatef((bookPos * posPerAngle + bookPosCounter) * 1.5f + 156, 0, 0, 1);
+			glRotatef((bookPos * posPerAngle + bookPosCounter) * 1.5f + 156, 1, 0, 1);
+			//glRotatef((bookPos * posPerAngle + bookPosCounter) * 1.5f + 156, 1, 0, 0);
 		}
 		else if (flash_count < 900)
 		{
@@ -513,7 +519,7 @@ void myDisplay()
 			look[2] = eye[2] + 100 * SIN(AngleXZ);
 			buttToRoom = 1;
 			drawRoom = 1;
-			drawSward = 1;
+			drawStones = 1;
 			flash_count = 0;
 		}
 		glPushMatrix();
@@ -529,7 +535,7 @@ void myDisplay()
 	if (buttToRoom)
 	{
 		flash_count++;
-		full_light += 0.00003f;
+		full_light += 0.0001f;
 		GLfloat ambientLight[] = { full_light, full_light, full_light, 1.0f };
 		// 设置光照模型，将ambientLight所指定的RGBA强度值应用到环境光
 		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLight);
@@ -544,7 +550,9 @@ void myDisplay()
 	if (drawRoom)
 	{
 		glDisable(GL_LIGHT1);
-		//glEnable(GL_LIGHT1);
+		glDisable(GL_LIGHT2);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture[9]);
 		glPushMatrix();
@@ -587,19 +595,19 @@ void myDisplay()
 
 		//画前面
 		glTexCoord2f(0, 0);
-		glNormal3f(0, 0, 1);
+		glNormal3f(0, 0, -1);
 		glVertex3f(-5, 0, -5);
 
 		glTexCoord2f(0, 1);
-		glNormal3f(0, 0, 1);
+		glNormal3f(0, 0, -1);
 		glVertex3f(-5, high, -5);
 
 		glTexCoord2f(1, 1);
-		glNormal3f(0, 0, 1);
+		glNormal3f(0, 0, -1);
 		glVertex3f(5, high, -5);
 
 		glTexCoord2f(1, 0);
-		glNormal3f(0, 0, 1);
+		glNormal3f(0, 0, -1);
 		glVertex3f(5, 0, -5);
 
 		//画地面
@@ -624,47 +632,60 @@ void myDisplay()
 		glDisable(GL_TEXTURE_2D);
 	}
 
-	if (torch_on)
+	if (drawStones && torch_on)
 	{
-		float y = AngleYZ / 180.0f;
-		glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 60);
-		/*GLfloat spot_pos[] = { eye[0] - COS(AngleXZ), -y, eye[2] - SIN(AngleXZ), 0.0f };
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		GLfloat  spot_direction[] = { 100 * COS(AngleXZ),y - 3, 100 * SIN(AngleXZ) };
-		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);*/
-		GLfloat spot_pos[] = { eye[0], eye[1], eye[2], 1.0f };
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		//GLfloat  spot_direction[] = { 100 * COS(AngleXZ),y - 3, 100 * SIN(AngleXZ) };
-		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, look);
-		glEnable(GL_LIGHT0);
-	}
-	else
-	{
-		glDisable(GL_LIGHT0);
-	}
-
-	if (drawSward && torch_on)
-	{
-		glPushMatrix();
+		//画4个石头
+		glPushMatrix();  //1
 		glTranslatef(0.0, -3, -10);
-		glPushMatrix();
+		glPushMatrix();  //2
+		glTranslatef(-1.5, 0, -2.0);
+		//glRotated(-45, 0, 1, 0);
+		glScaled(0.01, 0.01, 0.01);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture[11]);
+		stone.drawMesh();
+		glDisable(GL_TEXTURE_2D);
+		glPopMatrix();  //2
+
+		glPushMatrix();  //2
+		glTranslatef(2.0, 0, -1);
+		glRotated(140, 1, 1, 0);
+		glScaled(0.01, 0.01, 0.01);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture[11]);
+		stone.drawMesh();
+		glDisable(GL_TEXTURE_2D);
+		glPopMatrix();  //2
+
+		glPushMatrix();  //2
+		glTranslatef(-2.0, 0, 1.5);
 		glRotated(-45, 0, 1, 0);
 		glScaled(0.01, 0.01, 0.01);
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, texture[8]);
-		sward.drawMesh();
+		glBindTexture(GL_TEXTURE_2D, texture[11]);
+		stone.drawMesh();
 		glDisable(GL_TEXTURE_2D);
-		glPopMatrix();
-		glPopMatrix();
+		glPopMatrix();  //2
+
+		glPushMatrix();  //2
+		glTranslatef(0.5, 0, 1.8);
+		glRotated(56, 0, 0, 1);
+		glScaled(0.01, 0.01, 0.01);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture[11]);
+		stone.drawMesh();
+		glDisable(GL_TEXTURE_2D);
+		glPopMatrix();  //2
+		glPopMatrix();  //1
 	}
 
 	if (drawBomb)
 	{
-		glPushMatrix();
+		glPushMatrix();  //1
 		glTranslatef(0.0, -3, -12);
 		if (bombZ > 2)
 		{
-			glPushMatrix();
+			glPushMatrix();  //2
 			//抛物线运动
 			glTranslatef(0.0f, bombY, bombZ);
 			glRotatef(spinX, 1, 0, 0);
@@ -674,7 +695,7 @@ void myDisplay()
 			bomb.drawMesh();
 			glBindTexture(GL_TEXTURE_2D, texture[2]);
 			fuse.ignite();
-			glPopMatrix();
+			glPopMatrix();  //2
 			bombY += bombVy;
 			bombVy += bombAy;
 			bombZ += bombVz;
@@ -687,7 +708,7 @@ void myDisplay()
 			torch_on = 0;
 			flash_count++;
 			blocks->update();
-			drawSward = 0;
+			drawStones = 0;
 		}
 		else
 		{
@@ -695,7 +716,7 @@ void myDisplay()
 			drawBomb = 0;
 			drawBuddha = 1;
 		}
-		glPopMatrix();
+		glPopMatrix();  //1
 	}
 
 	if (drawBuddha)
@@ -779,12 +800,21 @@ void Key(unsigned char key, int x, int y)
 	{
 	case ' ':
 		torch_on = !torch_on;
+		if (torch_on)
+		{
+			glEnable(GL_LIGHT0);
+		}
+		else
+		{
+			glDisable(GL_LIGHT0);
+		}
 		break;
 	//case 'b':
 	//	drawBomb = 1;
 	//	break;
 	//case 'g':
 	//	drawBook = 1;
+	//	drawSkyBox = 1;
 	//	break;
 	//case 's':
 	//	drawSkyBox = !drawSkyBox;
@@ -804,24 +834,77 @@ void Key(unsigned char key, int x, int y)
 	//	}
 	//	break;
 	case 'a': // 移动light2
-		light2_pos[0] -= 0.5f;
-		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
-		cout << "pos: " << light2_pos[0] <<", "<< light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
+		spot_pos[0] -= 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "pos: " << spot_pos[0] <<", "<< spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
 		break;
 	case 'd':// 右102
-		light2_pos[0] += 0.5f;
-		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
-		cout << "pos: " << light2_pos[0] << ", " << light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
+		spot_pos[0] += 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
 		break;
 	case 'w':// 上101
-		light2_pos[1] -= 0.5f;
-		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
-		cout << "pos: " << light2_pos[0] << ", " << light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
+		spot_pos[1] -= 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
 		break;
 	case 's':// 下103
-		light2_pos[1] += 0.5f;
-		glLightfv(GL_LIGHT2, GL_POSITION, light2_pos);
-		cout << "pos: " << light2_pos[0] << ", " << light2_pos[1] << ", " << light2_pos[2] << ", " << endl;
+		spot_pos[1] += 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		break;
+	case 'q':// 上101
+		spot_pos[2] -= 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		break;
+	case 'e':// 下103
+		spot_pos[2] += 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		break;
+
+	case 'j': // 移动light2
+		spot_direction[0] -= 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		break;
+	case 'l':// 右102
+		spot_direction[0] += 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		break;
+	case 'i':// 上101
+		spot_direction[1] -= 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		break;
+	case 'k':// 下103
+		spot_direction[1] += 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		break;
+	case 'u':// 上101
+		spot_direction[2] -= 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		break;
+	case 'o':// 下103
+		spot_direction[2] += 0.5f;
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
+		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
 		break;
 	//case 'a': // 左100
 	//	bookTranslateX -= bookMove;
@@ -1088,11 +1171,8 @@ void myInit()
 	//glEnable(GL_LIGHT1);
 
 	//手电筒的光
-	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 60);
-	GLfloat spot_pos[] = { 0, -1, 2, 0.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-	GLfloat  spot_direction[] = { 0, 0.0, -1.0 };
-	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
+	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 20);
+	//GLfloat spot_pos[] = { 0, -1, 2, 0.0f };
 
 	//照着buddha的光
 	float light1_pos[] = { 0, 3, 2, 0.0f };
@@ -1104,7 +1184,11 @@ void myInit()
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
 	//glLightfv(GL_LIGHT1, GL_AMBIENT, dimwhite);
 	glLightfv(GL_LIGHT1, GL_SPECULAR, light1_specular);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, light1_specular);
+
+	float light0_diffuse[] = { 5,5,5 };
+	float light0_specular[] = { 10,10,10 };
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
 	//双面光照
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	glEnable(GL_LIGHTING);
@@ -1143,11 +1227,12 @@ void myInit()
 	butt->isDraw = true;
 	delete tex;
 
-	cout << "ok0" << endl;
 	TCHAR filename5[] = L"tex\\Sword_roughness.jpg";  //这里应该用好的mapping
 	BuildTexture(filename5, texture[8]);
-	cout << "ok" << endl;
-	sward.readFile("obj\\sword2.obj");
+	//石头们(一个当多个用呗
+	stone.readFile("obj\\stone.obj");
+	//剑
+	sward.readFile("obj\\sward.obj");
 
 	TCHAR filename6[] = L"tex\\th.jpg";  //这里应该用好的mapping
 	BuildTexture(filename6, texture[9]);
@@ -1163,6 +1248,9 @@ void myInit()
 	//闪电
 	TCHAR filename10[] = L"tex\\shandian4.jpg";
 	BuildTexture(filename10, texture[10]);
+
+	TCHAR filename11[] = L"tex\\stone.jpg";
+	BuildTexture(filename11, texture[11]);
 
 	bomb.readFile("obj\\new_bomb.obj");
 	fuse.readFile("obj\\new_fuse.obj");
