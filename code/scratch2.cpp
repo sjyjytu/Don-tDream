@@ -54,12 +54,17 @@ butterflyManager* butt;
 float speed = 1.0f;
 float eyex, eyey, eyez, lookx, looky, lookz;
 
-bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 1, drawStones = 1, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
-
+bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 1, drawStones = 0, drawSward = 0, drawBomb = 0, drawBuddha = 1, buttToRoom = 0;
+bool earthquake = 1;
+//float alpha = 0.1f;  //地震系数
+//float beta = 0.06f;  //地震系数
+float alpha = 0.02f;  //地震系数
+float beta = 0.02f;  //地震系数
 bool torch_on = 0; //手电筒
 
 Mesh sward;
 Mesh stone;
+Mesh block_unit;
 Bomb bomb;
 Fuse fuse;
 Buddha buddha1;
@@ -67,12 +72,18 @@ Buddha buddha2;
 Buddha buddha3;
 Buddha buddha4;
 
+//buddha参数
+float mat_color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float mat_diffuse[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float mat_emission[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float mat_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
 emitter* blocks;
 
 CjySkyBox* mSkyBox;
 
 float bombY = 3.0f, bombZ = 12.0f, spinX = 45;
-float bombVy = 0.05f, bombAy = -0.001f, bombVz = -0.08f, spinVx = -1;
+float bombVy = 0.05f, bombAy = -0.0015f, bombVz = -0.12f, spinVx = -1;
 
 int flash_count = 0;
 int butt_count = 0;
@@ -88,8 +99,8 @@ bool drawLightning = 0;
 bool recoverLight2 = 0;
 
 //手电筒
-GLfloat spot_pos[] = { 0, 0, 0, 1.0f };
-GLfloat  spot_direction[] = { 0, 0.0, -1.0 };
+GLfloat spot_pos[] = { 1, 0.5, 0, 1.0f };
+GLfloat  spot_direction[] = { 0, -0.5, -1.0 };
 
 //book bump mapping
 //Our book
@@ -555,6 +566,15 @@ void myDisplay()
 		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture[9]);
+		//爆炸后的地震
+		glPushMatrix();
+		if (earthquake)
+		{
+			glRotatef((rand() % 2 - 0.5)* alpha, 1, 0, 0);
+			glRotatef((rand() % 2 - 0.5)* alpha, 0, 1, 0);
+			glRotatef((rand() % 2 - 0.5)* alpha, 0, 0, 1);
+			glTranslatef((rand() % 2 - 0.5)* beta, (rand() % 2 - 0.5)* beta, (rand() % 2 - 0.5)* beta);
+		}
 		glPushMatrix();
 		glTranslatef(0.0, -3, -10);
 		float high = 12;
@@ -629,6 +649,7 @@ void myDisplay()
 
 		glEnd();
 		glPopMatrix();
+		glPopMatrix();
 		glDisable(GL_TEXTURE_2D);
 	}
 
@@ -702,13 +723,18 @@ void myDisplay()
 			spinX += spinVx;
 			glDisable(GL_TEXTURE_2D);
 		}
-		else if (flash_count < 3000)
+		else if (flash_count < 250)
 		{
-			//爆炸出石块
+			//关灯,爆炸出石块
+			earthquake = 1;
+			alpha -= 0.08 / 250.0f;
+			beta -= 0.04 / 250.0f;
 			torch_on = 0;
+			glDisable(GL_LIGHT0);
 			flash_count++;
 			blocks->update();
 			drawStones = 0;
+			cout << flash_count << endl;
 		}
 		else
 		{
@@ -721,54 +747,21 @@ void myDisplay()
 
 	if (drawBuddha)
 	{
-		glPushMatrix();
-		glTranslatef(0.0, -3, -10);
 		glEnable(GL_LIGHT1);
-		glPushMatrix();
-		glTranslatef(0.0f, -1.0f, 0.0f);
-		glScalef(10.0f, 10.0f, 10.0f);
-		glEnable(GL_TEXTURE_2D);
-		//if (torch_on)
-		//{
-		//	flash_count++;
-		//	cout << flash_count << endl;
-		//	//材质逐渐变银最后变金色
-		//	glBindTexture(GL_TEXTURE_2D, texture[1]);
-		//	if (flash_count==100)
-		//	{
-		//		cout << "buddha load res3" << endl;
-		//		buddha.reReadFile("obj\\happy_vrip_res3.obj");
-		//		cout << "buddha finish res3" << endl;
-		//	}
-		//	else if(flash_count == 120)
-		//	{
-		//		cout << "buddha load res2" << endl;
-		//		buddha.reReadFile("obj\\happy_vrip_res2.obj");
-		//		cout << "buddha finish res2" << endl;
-		//	}
-		//	else if(flash_count == 140)
-		//	{
-		//		cout << "buddha load res1" << endl;
-		//		buddha.reReadFile("obj\\happy_vrip.obj");
-		//		cout << "buddha finish res1" << endl;
-		//	}
-		//}
-		//else
-		//{
-		//	if (flash_count!=0)
-		//	{
-		//		flash_count = 0;
-		//		cout << "buddha load res4" << endl;
-		//		buddha.reReadFile("obj\\happy_vrip_res4.obj");
-		//		cout << "buddha finish res4" << endl;
-		//	}
-		//	//绑定粗糙纹理,设置灰色石质
-		//	glBindTexture(GL_TEXTURE_2D, texture[1]);
-		//}
-		//buddha.drawMesh();
+		glColorMaterial(GL_FRONT, GL_DIFFUSE);
+		glEnable(GL_COLOR_MATERIAL);
 		if (torch_on)
 		{
-			flash_count++;
+			spot_pos[1] = 5;
+			glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
+		}
+		glPushMatrix();
+		glTranslatef(0.0, -4, -10);
+		glScalef(10.0f, 10.0f, 10.0f);
+		glEnable(GL_TEXTURE_2D);
+		if (torch_on)
+		{
+			/*flash_count++;
 			if (flash_count >= 100 && flash_count < 200)
 			{
 				buddha3.drawMesh();
@@ -781,14 +774,20 @@ void myDisplay()
 			{
 				buddha1.drawMesh();
 			}
+			cout << flash_count << endl;*/
+			//buddha材料属性	
+			glColor4fv(mat_color); // 颜色追踪！！！！！！！
+			buddha4.drawMesh();
+			glColor3f(0, 0, 0); // 颜色追踪！！！！！！！
 		}
 		else
 		{
 			flash_count = 0;
 			buddha4.drawMesh();
 		}
-		glDisable(GL_TEXTURE_2D);
 		glPopMatrix();
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_COLOR_MATERIAL);
 	}
 	glutSwapBuffers();
 	glutPostRedisplay();
@@ -809,9 +808,9 @@ void Key(unsigned char key, int x, int y)
 			glDisable(GL_LIGHT0);
 		}
 		break;
-	//case 'b':
-	//	drawBomb = 1;
-	//	break;
+	case 'b':
+		drawBomb = 1;
+		break;
 	//case 'g':
 	//	drawBook = 1;
 	//	drawSkyBox = 1;
@@ -834,169 +833,91 @@ void Key(unsigned char key, int x, int y)
 	//	}
 	//	break;
 	case 'a': // 移动light2
-		spot_pos[0] -= 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "pos: " << spot_pos[0] <<", "<< spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		mat_diffuse[0] -= 0.1f;
+		cout << "mat_diffuse: " << mat_diffuse[0] <<", "<< mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
 		break;
 	case 'd':// 右102
-		spot_pos[0] += 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		mat_diffuse[0] += 0.1f;
+		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
 		break;
 	case 'w':// 上101
-		spot_pos[1] -= 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		mat_diffuse[1] -= 0.1f;
+		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
 		break;
 	case 's':// 下103
-		spot_pos[1] += 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		mat_diffuse[1] += 0.1f;
+		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
 		break;
 	case 'q':// 上101
-		spot_pos[2] -= 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		mat_diffuse[2] -= 0.1f;
+		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
 		break;
 	case 'e':// 下103
-		spot_pos[2] += 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "pos: " << spot_pos[0] << ", " << spot_pos[1] << ", " << spot_pos[2] << ", " << endl;
+		mat_diffuse[2] += 0.1f;
+		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
+		break;
+
+	case 'f': // 移动light2
+		mat_color[0] -= 0.1f;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 'h':// 右102
+		mat_color[0] += 0.1f;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 't':// 上101
+		mat_color[1] -= 0.1f;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 'g':// 下103
+		mat_color[1] += 0.1f;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 'r':// 上101
+		mat_color[2] -= 0.1f;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 'y':// 下103
+		mat_color[2] += 0.1f;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
 		break;
 
 	case 'j': // 移动light2
-		spot_direction[0] -= 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		mat_emission[0] -= 0.1f;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
 		break;
 	case 'l':// 右102
-		spot_direction[0] += 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		mat_emission[0] += 0.1f;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
 		break;
 	case 'i':// 上101
-		spot_direction[1] -= 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		mat_emission[1] -= 0.1f;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
 		break;
 	case 'k':// 下103
-		spot_direction[1] += 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		mat_emission[1] += 0.1f;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
 		break;
 	case 'u':// 上101
-		spot_direction[2] -= 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		mat_emission[2] -= 0.1f;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
 		break;
 	case 'o':// 下103
-		spot_direction[2] += 0.5f;
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
-		glLightfv(GL_LIGHT0, GL_POSITION, spot_direction);
-		cout << "direction: " << spot_direction[0] << ", " << spot_direction[1] << ", " << spot_direction[2] << ", " << endl;
+		mat_emission[2] += 0.1f;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
 		break;
-	//case 'a': // 左100
-	//	bookTranslateX -= bookMove;
-	//	cout << bookTranslateX << ", " << bookTranslateY << endl;
-	//	break;
-	//case 'd':// 右102
-	//	bookTranslateX += bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
-	//	break;
-	//case 'w':// 上101
-	//	bookTranslateY += bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
-	//	break;
-	//case 's':// 下103
-	//	bookTranslateY -= bookMove; cout << bookTranslateX << ", " << bookTranslateY << endl;
-	//	break;
-	//case 'q':// 上101
-	//	bookRotate += bookRotateV; cout << bookRotate << endl;
-	//	break;
-	//case 'e':// 下103
-	//	bookRotate -= bookRotateV; cout << bookRotate << endl;
-	//	break;
-	//case '1':
-	//	fcStart -= fcSEChangeV;
-	//	cout << fcStart << "  " << fcEnd << endl;
-	//	glFogf(GL_FOG_START, fcStart);
-	//	glFogf(GL_FOG_END, fcEnd);
-	//	break;
-	//case '2':
-	//	fcStart += fcSEChangeV;
-	//	cout << fcStart << "  " << fcEnd << endl;
-	//	glFogf(GL_FOG_START, fcStart);
-	//	glFogf(GL_FOG_END, fcEnd);
-	//	break;
-	//case '3':
-	//	fcEnd -= fcSEChangeV;
-	//	cout << fcStart << "  " << fcEnd << endl;
-	//	glFogf(GL_FOG_START, fcStart);
-	//	glFogf(GL_FOG_END, fcEnd);
-	//	break;
-	//case '4':
-	//	fcEnd += fcSEChangeV;
-	//	glFogf(GL_FOG_START, fcStart);
-	//	glFogf(GL_FOG_END, fcEnd);
-	//	cout << fcStart << "  " << fcEnd << endl;
-	//	break;
-	//case '5':
-	//	fcSEChangeV *= 2;
-	//	cout << fcSEChangeV<< endl;
-	//	break;
-	//case '6':
-	//	fcSEChangeV /= 2;
-	//	cout << fcSEChangeV<< endl;
-	//	break;
-	//case '7':
-	//	bookMove += 0.1f;
-	//	cout << bookMove << endl;
-	//	break;
-	//case '8':
-	//	bookMove -= 0.1f;
-	//	cout << bookMove << endl;
-	//	break;
-	//case '9':
-	//	bookCoverScale *= 10;
-	//	cout << bookCoverScale << endl;
-	//	break;
-	//case '0':
-	//	bookCoverScale *= 0.1f;
-	//	cout << bookCoverScale << endl;
-	//	break;
-	//case '-':
-	//	bookRotateV *= 0.1f;
-	//	cout << bookRotateV << endl;
-	//	break;
-	//case '=':
-	//	bookRotateV *= 10.0f;
-	//	cout << bookRotateV << endl;
-	//	break;
-	//case 'j': // 左100
-	//	bookCoverScaleX -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-	//	break;
-	//case 'l':// 右102
-	//	bookCoverScaleX += bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-	//	break;
-	//case 'i':// 上101
-	//	bookCoverScaleY += bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-	//	break;
-	//case 'k':// 下103
-	//	bookCoverScaleY -= bookCoverScale; cout << bookCoverScaleX << ", " << bookCoverScaleY << endl;
-	//	break;
-	//case '.':
-	//	bookPosCounter++;
-	//	cout << bookPos <<"; "<<bookPath->getX(bookPos) << ", " << bookPath->getY(bookPos) <<", "<< int((bookPos* posPerAngle + bookPosCounter) * 1.5f)%360  << endl;
-	//	break;
+	case 'z':// 下103
+		mat_diffuse[0] = mat_diffuse[1] = mat_diffuse[2] = 0;
+		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
+		break;
+	case 'x':// 下103
+		mat_color[0] = mat_color[1] = mat_color[2] = 0;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 'c':// 下103
+		mat_emission[0] = mat_emission[1] = mat_emission[2] = 0;
+		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
+		break;
 	default:
 		break;
 	}
@@ -1064,12 +985,17 @@ void onMouseDown(int button, int state, int x, int y)
 
 particle3d* init_block(float x, float y, float z)
 {
-	float size = rand() % 10;
-	float color[] = { 226 / 255.0f, 17 / 255.0f, 12 / 255.0f };
-	particle3d* p = new particle3d(size, x, y, z,
-		(rand() % 10 - 5) / 100.0, (rand() % 10 - 5) / 100.0, (rand() % 10 - 5) / 100.0,
-		(rand() % 10 - 5) / 1000.0, (rand() % 10 - 5) / 1000.0, (rand() % 10 - 5) / 1000.0,
-		rand() % 50, color);
+	float x_offset = (rand() % 40 - 20) / 5;
+	float y_offset = (rand() % 40 - 20) / 20;
+	float z_offset = (rand() % 40 - 20) / 10;
+	float size = rand() % 10 * 0.01f;
+	float speed[] = { float(rand() % 10 - 4) / 40, float(rand() % 10 - 4) / 20, float(rand() % 10 - 4) / 40 };
+	float acc[] = { 1.0f * (rand() % 3 - 1) / 900,4.9 / 400 ,1.0f * (rand() % 3 - 1) / 900 };
+	float angle[] = { rand() % 360, rand() % 360 ,rand() % 360 };
+
+	particle3d* p = new flame_particle(size, size, size, x + x_offset, y + y_offset, z + z_offset,
+		speed[0], speed[1], speed[2], acc[0], acc[1], acc[2], angle[0], angle[1], angle[2],
+		rand() % 40 + 10, texture[12]);
 	return p;
 }
 
@@ -1160,15 +1086,6 @@ void myInit()
 
 	glEnable(GL_DEPTH_TEST);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	//float pos[] = { 1.0f, 1.0f, 1.0f, 0.0f };
-	//float white[] = { 255,255,255 };
-	//float dimwhite[] = { 0.2 * 255,0.2 * 255,0.2 * 255 };
-	////Set up light
-	//glLightfv(GL_LIGHT1, GL_POSITION, pos);
-	//glLightfv(GL_LIGHT1, GL_DIFFUSE, white);
-	//glLightfv(GL_LIGHT1, GL_AMBIENT, dimwhite);
-	//glLightfv(GL_LIGHT1, GL_SPECULAR, white);
-	//glEnable(GL_LIGHT1);
 
 	//手电筒的光
 	glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 20);
@@ -1178,11 +1095,10 @@ void myInit()
 	float light1_pos[] = { 0, 3, 2, 0.0f };
 	float light1_diffuse[] = { 5,5,5 };
 	float light1_specular[] = { 10,10,10 };
-	float dimwhite[] = { 2,2,2 };
+
 	//Set up light
 	glLightfv(GL_LIGHT1, GL_POSITION, light1_pos);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
-	//glLightfv(GL_LIGHT1, GL_AMBIENT, dimwhite);
 	glLightfv(GL_LIGHT1, GL_SPECULAR, light1_specular);
 
 	float light0_diffuse[] = { 5,5,5 };
@@ -1231,6 +1147,8 @@ void myInit()
 	BuildTexture(filename5, texture[8]);
 	//石头们(一个当多个用呗
 	stone.readFile("obj\\stone.obj");
+	//石屑
+	block_unit.readFile("obj\\rock.obj");
 	//剑
 	sward.readFile("obj\\sward.obj");
 
@@ -1238,12 +1156,16 @@ void myInit()
 	BuildTexture(filename6, texture[9]);
 
 	//炸弹
-	TCHAR filename7[] = L"tex\\bomb5.jpg";
+	TCHAR filename7[] = L"tex\\gold.jpg";
 	BuildTexture(filename7, texture[1]);
 	TCHAR filename8[] = L"tex\\string.jpg";
 	BuildTexture(filename8, texture[2]);
 	TCHAR filename9[] = L"tex\\spark.bmp";
 	BuildTexture(filename9, texture[3]);
+
+	//石屑
+	TCHAR filename12[] = L"tex\\rock.jpg";
+	BuildTexture(filename12, texture[12]);
 
 	//闪电
 	TCHAR filename10[] = L"tex\\shandian4.jpg";
@@ -1258,14 +1180,17 @@ void myInit()
 
 	blocks = new emitter(200, 0.0f, 2.0f, 2.0f);
 	blocks->emit(init_block);
+	cout << "okk" << endl;
+	blocks->block = block_unit;
+	cout << "okk2" << endl;
 
-	//buddha4.readFile("obj\\happy_vrip_res4.obj");
-	//cout << "load buddha4 finish" << endl;
+	buddha4.readFile("obj\\happy_vrip_res4.obj");
+	cout << "load buddha4 finish" << endl;
 	/*buddha3.readFile("obj\\happy_vrip_res3.obj");
-	cout << "load buddha3 finish" << endl;
-	buddha2.readFile("obj\\happy_vrip_res2.obj");
-	cout << "load buddha2 finish" << endl;
-	buddha1.readFile("obj\\happy_vrip.obj");
+	cout << "load buddha3 finish" << endl;*/
+	/*buddha2.readFile("obj\\happy_vrip_res2.obj");
+	cout << "load buddha2 finish" << endl;*/
+	/*buddha1.readFile("obj\\happy_vrip.obj");
 	cout << "load buddha1 finish" << endl;*/
 
 	//天空盒子

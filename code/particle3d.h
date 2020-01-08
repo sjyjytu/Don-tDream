@@ -2,6 +2,7 @@
 #define GLUT_DISABLE_ATEXIT_HACK
 #include <gl/glut.h>
 #include <vector>
+#include "mesh.h"
 
 using namespace std;
 
@@ -33,26 +34,7 @@ protected:
 	float life;  //生命
 	float color[3];
 	friend class emitter;
-	virtual void show();
-};
-
-class chip_particle : public particle3d
-{
-public:
-	chip_particle(float size,
-		float _x, float _y, float _z,
-		float _speed_x, float _speed_y, float _speed_z,
-		float _acc_x, float _acc_y, float _acc_z,
-		float angle_x, float angle_y, float angle_z,
-		float theta_x, float theta_y, float theta_z,
-		float _life, float* _color, int vertex_num);
-	~chip_particle() {};
-	void show();
-private:
-	my_vec3 angle, theta;  //角度、角速度
-	int vertex_num;
-	vector<my_vec3> vertexes;
-
+	virtual void show(Mesh &block);
 };
 
 class flame_particle : public particle3d
@@ -65,8 +47,7 @@ public:
 		float angle_x, float angle_y, float angle_z,
 		float _life, GLuint _texture);
 	~flame_particle() {};
-	void show();
-	void draw(GLuint texture);
+	void show(Mesh &block);
 private:
 	my_vec3 flame_size;
 	my_vec3 angle;  //角度
@@ -79,6 +60,7 @@ class emitter {
 	particle3d** p;//管理所有粒子
 	particle3d* (*f)(float, float, float); //初始化粒子的函数指针
 public:
+	Mesh block;
 	float x, y, z; //发射器位置
 	void emit(particle3d* (init)(float, float, float));
 	void update();
