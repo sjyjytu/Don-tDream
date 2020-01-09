@@ -54,7 +54,7 @@ butterflyManager* butt;
 float speed = 1.0f;
 float eyex, eyey, eyez, lookx, looky, lookz;
 
-bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 1, drawStones = 1, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
+bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 0, drawStones = 0, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
 bool earthquake = 0;
 float alpha = 0.1f;  //地震系数
 float beta = 0.06f;  //地震系数
@@ -71,13 +71,11 @@ Buddha buddha3;
 Buddha buddha4;
 
 //buddha参数
-float mat_color[] = { 0, 1, 0, 1.0f };
-float mat_diffuse[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-float mat_emission[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-float mat_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float buddaY = 7.0f;
 int buddhaColorIndex = 0;
 
 //六脉神剑
+float mat_color[] = { 0, 1, 0, 1.0f };
 int swardNum = 6;
 float swardR = 2;
 float swardAngle = 360.0 / swardNum;
@@ -572,7 +570,6 @@ void myDisplay()
 		glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
 		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, texture[9]);
 		//爆炸后的地震
 		glPushMatrix();
 		if (earthquake)
@@ -584,6 +581,7 @@ void myDisplay()
 		}
 		glPushMatrix();
 		glTranslatef(0.0, -3, -10);
+		glBindTexture(GL_TEXTURE_2D, texture[9]);
 		float high = 12;
 		//画左面
 		glBegin(GL_QUADS);
@@ -755,6 +753,10 @@ void myDisplay()
 	
 	if (drawBuddha)
 	{
+		if (buddaY > 0)
+		{
+			buddaY -= 0.1f;
+		}
 		glEnable(GL_LIGHT1);
 		glColorMaterial(GL_FRONT, GL_DIFFUSE);
 		glEnable(GL_COLOR_MATERIAL);
@@ -767,7 +769,7 @@ void myDisplay()
 			}
 			glColor4fv(mat_color);
 			glPushMatrix();
-			glTranslatef(0, 2, -10);
+			glTranslatef(0, 2+buddaY, -10);
 			for (int i = 0; i < swardNum; i++)
 			{
 				glPushMatrix();
@@ -788,7 +790,7 @@ void myDisplay()
 			glLightfv(GL_LIGHT0, GL_POSITION, spot_pos);
 		}
 		glPushMatrix();
-		glTranslatef(0.0, -4, -10);
+		glTranslatef(0.0, -4 + buddaY, -10);
 		glScalef(10.0f, 10.0f, 10.0f);
 		glColor4fv(mat_colors[buddhaColorIndex]);  //buddha材料属性	
 		if (torch_on)
@@ -811,18 +813,17 @@ void myDisplay()
 			}
 			else if (buddhaColorIndex < 195)
 			{
-				//buddha2.drawMesh();
-				buddha3.drawMesh();
+				buddha2.drawMesh();
 			}
 			else
 			{
-				//buddha1.drawMesh();
-				buddha3.drawMesh();
+				buddha1.drawMesh();
 			}
 			//cout << buddhaColorIndex << endl;
 		}
 		else
 		{
+			//buddha从天而降
 			buddhaColorIndex = 0;
 			buddha4.drawMesh();
 		}
@@ -1047,13 +1048,10 @@ void myInit()
 	//炸弹爆炸的光
 	float light3_pos[] = { 0, 3, 3, 0.0f };
 	float light3_diffuse[] = { 1,0.3,0.3 };
-	float light3_specular[] = { 10,2,2 };
 
 	//Set up light
 	glLightfv(GL_LIGHT3, GL_POSITION, light3_pos);
-	//glLightfv(GL_LIGHT3, GL_DIFFUSE, light3_diffuse);
 	glLightfv(GL_LIGHT3, GL_AMBIENT, light3_diffuse);
-	//glLightfv(GL_LIGHT3, GL_SPECULAR, light3_specular);
 
 	//双面光照
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
@@ -1136,12 +1134,12 @@ void myInit()
 
 	buddha4.readFile("obj\\happy_vrip_res4.obj");
 	cout << "load buddha4 finish" << endl;
-	/*buddha3.readFile("obj\\happy_vrip_res3.obj");
-	cout << "load buddha3 finish" << endl;*/
-	/*buddha2.readFile("obj\\happy_vrip_res2.obj");
+	buddha3.readFile("obj\\happy_vrip_res3.obj");
+	cout << "load buddha3 finish" << endl;
+	buddha2.readFile("obj\\happy_vrip_res2.obj");
 	cout << "load buddha2 finish" << endl;
 	buddha1.readFile("obj\\happy_vrip.obj");
-	cout << "load buddha1 finish" << endl;*/
+	cout << "load buddha1 finish" << endl;
 
 	//天空盒子
 	CString TexPath(".\\skybox\\mp_cloud9\\cloud9_"); // 云 台  这个好
