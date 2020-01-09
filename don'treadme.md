@@ -4,7 +4,7 @@
 
 做一个盗墓笔记的片头动画，具体要求：
 
-![1577797775994](/figure/1.png)
+![1577797775994](./figure/1.png)
 
 ### 动手
 
@@ -52,3 +52,9 @@
 
 - [Skyboxes](http://www.custommapmakers.org/skyboxes.php) 这个网站下下来的图片是tga格式的
 - [humus](http://www.humus.name) 这个网站是一张图片的盒子，在Texture里
+
+
+
+### 实现细节
+
+请看作业报告~
