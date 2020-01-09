@@ -54,12 +54,10 @@ butterflyManager* butt;
 float speed = 1.0f;
 float eyex, eyey, eyez, lookx, looky, lookz;
 
-bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 1, drawStones = 0, drawSward = 0, drawBomb = 0, drawBuddha = 1, buttToRoom = 0;
-bool earthquake = 1;
-//float alpha = 0.1f;  //地震系数
-//float beta = 0.06f;  //地震系数
-float alpha = 0.02f;  //地震系数
-float beta = 0.02f;  //地震系数
+bool drawSkyBox = 0, drawBook = 0, drawButt = 0, drawRoom = 1, drawStones = 1, drawSward = 0, drawBomb = 0, drawBuddha = 0, buttToRoom = 0;
+bool earthquake = 0;
+float alpha = 0.1f;  //地震系数
+float beta = 0.06f;  //地震系数
 bool torch_on = 0; //手电筒
 
 Mesh sward;
@@ -73,11 +71,18 @@ Buddha buddha3;
 Buddha buddha4;
 
 //buddha参数
-float mat_color[] = { 0.872237, 0.628101, 0.0338002, 1.0f };
+float mat_color[] = { 0, 1, 0, 1.0f };
 float mat_diffuse[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 float mat_emission[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 float mat_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 int buddhaColorIndex = 0;
+
+//六脉神剑
+int swardNum = 6;
+float swardR = 2;
+float swardAngle = 360.0 / swardNum;
+float swardSpin = 0.0f;
+float swardTheta = 3.0f;
 
 emitter* blocks;
 
@@ -87,6 +92,7 @@ float bombY = 3.0f, bombZ = 12.0f, spinX = 45;
 float bombVy = 0.05f, bombAy = -0.0015f, bombVz = -0.12f, spinVx = -1;
 
 int flash_count = 0;
+int bomb_count = 0;
 int butt_count = 0;
 float full_light = 1.0f;
 
@@ -724,7 +730,7 @@ void myDisplay()
 			spinX += spinVx;
 			glDisable(GL_TEXTURE_2D);
 		}
-		else if (flash_count < 250)
+		else if (bomb_count < 250)
 		{
 			//关灯,爆炸出石块
 			earthquake = 1;
@@ -732,25 +738,50 @@ void myDisplay()
 			beta -= 0.04 / 250.0f;
 			torch_on = 0;
 			glDisable(GL_LIGHT0);
-			flash_count++;
+			glEnable(GL_LIGHT3);
+			bomb_count++;
 			blocks->update();
 			drawStones = 0;
-			cout << flash_count << endl;
 		}
 		else
 		{
-			flash_count = 0;
+			glDisable(GL_LIGHT3);
 			drawBomb = 0;
 			drawBuddha = 1;
+			drawSward = 1;
 		}
 		glPopMatrix();  //1
 	}
-
+	
 	if (drawBuddha)
 	{
 		glEnable(GL_LIGHT1);
 		glColorMaterial(GL_FRONT, GL_DIFFUSE);
 		glEnable(GL_COLOR_MATERIAL);
+		if (drawSward)
+		{
+			swardSpin += swardTheta;
+			for (int i = 0; i < 3; i++)
+			{
+				mat_color[i] = (rand() % 100) * 0.01f;
+			}
+			glColor4fv(mat_color);
+			glPushMatrix();
+			glTranslatef(0, 2, -10);
+			for (int i = 0; i < swardNum; i++)
+			{
+				glPushMatrix();
+				/*glTranslatef(swardR * COS(i * swardAngle + swardSpin), 0, swardR* SIN(i* swardAngle + swardSpin));
+				glRotatef(-(i * swardAngle + swardSpin) - 90, 0, 1, 0);*/
+				float sangle = float(i * swardAngle) + swardSpin;
+				glTranslatef(swardR* COS(sangle), 0, swardR* SIN(sangle));
+				glRotatef(-sangle - 90, 0, 1, 0);
+				glScalef(2, 2, 2);
+				sward.drawMesh();
+				glPopMatrix();
+			}
+			glPopMatrix();
+		}
 		if (torch_on)
 		{
 			spot_pos[1] = 5;
@@ -774,18 +805,21 @@ void myDisplay()
 			}
 			else if (buddhaColorIndex <= 185)
 			{
+				drawSward = 0;
 				earthquake = 0;
 				buddha3.drawMesh();
 			}
 			else if (buddhaColorIndex < 195)
 			{
-				buddha2.drawMesh();
+				//buddha2.drawMesh();
+				buddha3.drawMesh();
 			}
 			else
 			{
-				buddha1.drawMesh();
+				//buddha1.drawMesh();
+				buddha3.drawMesh();
 			}
-			cout << buddhaColorIndex << endl;
+			//cout << buddhaColorIndex << endl;
 		}
 		else
 		{
@@ -815,136 +849,12 @@ void Key(unsigned char key, int x, int y)
 			glDisable(GL_LIGHT0);
 		}
 		break;
-	/*case 'b':
-		drawBomb = 1;
-		break;*/
-	//case 'g':
-	//	drawBook = 1;
-	//	drawSkyBox = 1;
-	//	break;
-	//case 's':
-	//	drawSkyBox = !drawSkyBox;
-	//	break;
-	//case 'p':
-	//	stop = !stop;
-	//	break;
-	//case 'f':
-	//	fog = !fog;
-	//	if (fog)
-	//	{
-	//		glEnable(GL_FOG);
-	//	}
-	//	else
-	//	{
-	//		glDisable(GL_FOG);
-	//	}
-	//	break;
-	case 'a': // 移动light2
-		mat_diffuse[0] -= 0.1f;
-		cout << "mat_diffuse: " << mat_diffuse[0] <<", "<< mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-	case 'd':// 右102
-		mat_diffuse[0] += 0.1f;
-		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-	case 'w':// 上101
-		mat_diffuse[1] -= 0.1f;
-		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-	case 's':// 下103
-		mat_diffuse[1] += 0.1f;
-		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-	case 'q':// 上101
-		mat_diffuse[2] -= 0.1f;
-		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-	case 'e':// 下103
-		mat_diffuse[2] += 0.1f;
-		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-
-	case 'f': // 移动light2
-		mat_color[0] -= 0.1f;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 'h':// 右102
-		mat_color[0] += 0.1f;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 't':// 上101
-		mat_color[1] -= 0.1f;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 'g':// 下103
-		mat_color[1] += 0.1f;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 'r':// 上101
-		mat_color[2] -= 0.1f;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 'y':// 下103
-		mat_color[2] += 0.1f;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-
-	case 'j': // 移动light2
-		mat_emission[0] -= 0.1f;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'l':// 右102
-		mat_emission[0] += 0.1f;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'i':// 上101
-		mat_emission[1] -= 0.1f;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'k':// 下103
-		mat_emission[1] += 0.1f;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'u':// 上101
-		mat_emission[2] -= 0.1f;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'o':// 下103
-		mat_emission[2] += 0.1f;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'z':// 下103
-		mat_diffuse[0] = mat_diffuse[1] = mat_diffuse[2] = 0;
-		cout << "mat_diffuse: " << mat_diffuse[0] << ", " << mat_diffuse[1] << ", " << mat_diffuse[2] << ", " << endl;
-		break;
-	case 'x':// 下103
-		mat_color[0] = mat_color[1] = mat_color[2] = 0;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 'c':// 下103
-		mat_emission[0] = mat_emission[1] = mat_emission[2] = 0;
-		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
-		break;
-	case 'm':
-		cin >> mat_color[0] >> mat_color[1] >> mat_color[2];
-		mat_color[0] /= 255;
-		mat_color[1] /= 255;
-		mat_color[2] /= 255;
-		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
-		break;
-	case 'n':
-		for (int i = 0; i < 3; i++)
-		{
-			mat_color[i] *= 1.02f;
-		}
-		cout << "{" << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", 1.0f }," << endl;
-		break;
 	case 'b':
-		for (int i = 0; i < 3; i++)
-		{
-			mat_color[i] /= 1.01f;
-		}
-		cout << "{" << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", 1.0f }," << endl;
+		drawBomb = 1;
+		break;
+	case 'g':
+		drawBook = 1;
+		drawSkyBox = 1;
 		break;
 	default:
 		break;
@@ -1133,6 +1043,18 @@ void myInit()
 	float light0_specular[] = { 10,10,10 };
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
+
+	//炸弹爆炸的光
+	float light3_pos[] = { 0, 3, 3, 0.0f };
+	float light3_diffuse[] = { 1,0.3,0.3 };
+	float light3_specular[] = { 10,2,2 };
+
+	//Set up light
+	glLightfv(GL_LIGHT3, GL_POSITION, light3_pos);
+	//glLightfv(GL_LIGHT3, GL_DIFFUSE, light3_diffuse);
+	glLightfv(GL_LIGHT3, GL_AMBIENT, light3_diffuse);
+	//glLightfv(GL_LIGHT3, GL_SPECULAR, light3_specular);
+
 	//双面光照
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	glEnable(GL_LIGHTING);
@@ -1214,12 +1136,12 @@ void myInit()
 
 	buddha4.readFile("obj\\happy_vrip_res4.obj");
 	cout << "load buddha4 finish" << endl;
-	buddha3.readFile("obj\\happy_vrip_res3.obj");
-	cout << "load buddha3 finish" << endl;
-	buddha2.readFile("obj\\happy_vrip_res2.obj");
+	/*buddha3.readFile("obj\\happy_vrip_res3.obj");
+	cout << "load buddha3 finish" << endl;*/
+	/*buddha2.readFile("obj\\happy_vrip_res2.obj");
 	cout << "load buddha2 finish" << endl;
 	buddha1.readFile("obj\\happy_vrip.obj");
-	cout << "load buddha1 finish" << endl;
+	cout << "load buddha1 finish" << endl;*/
 
 	//天空盒子
 	CString TexPath(".\\skybox\\mp_cloud9\\cloud9_"); // 云 台  这个好
