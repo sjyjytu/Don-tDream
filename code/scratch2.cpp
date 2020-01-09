@@ -766,15 +766,18 @@ void myDisplay()
 			{
 				buddhaColorIndex++;
 			}
-			if (buddhaColorIndex <= 20)
+			if (buddhaColorIndex <= 100)
 			{
+				alpha -= 0.0002f;
+				beta -= 0.0002f;
 				buddha4.drawMesh();
 			}
-			else if (buddhaColorIndex <= 120)
+			else if (buddhaColorIndex <= 185)
 			{
+				earthquake = 0;
 				buddha3.drawMesh();
 			}
-			else if (buddhaColorIndex < 180)
+			else if (buddhaColorIndex < 195)
 			{
 				buddha2.drawMesh();
 			}
