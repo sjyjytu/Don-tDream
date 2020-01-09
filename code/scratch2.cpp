@@ -29,7 +29,7 @@
 #include "particle3d.h"
 #include "jySkySphere.h"
 #include "jySkyBox.h"
-
+#include "buddhaColor.h"
 
 const int windowWidth = 800;
 const int windowHeight = 600;
@@ -73,10 +73,11 @@ Buddha buddha3;
 Buddha buddha4;
 
 //buddha参数
-float mat_color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float mat_color[] = { 0.872237, 0.628101, 0.0338002, 1.0f };
 float mat_diffuse[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 float mat_emission[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 float mat_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+int buddhaColorIndex = 0;
 
 emitter* blocks;
 
@@ -758,35 +759,38 @@ void myDisplay()
 		glPushMatrix();
 		glTranslatef(0.0, -4, -10);
 		glScalef(10.0f, 10.0f, 10.0f);
-		glEnable(GL_TEXTURE_2D);
+		glColor4fv(mat_colors[buddhaColorIndex]);  //buddha材料属性	
 		if (torch_on)
 		{
-			/*flash_count++;
-			if (flash_count >= 100 && flash_count < 200)
+			if (buddhaColorIndex < 200)
+			{
+				buddhaColorIndex++;
+			}
+			if (buddhaColorIndex <= 20)
+			{
+				buddha4.drawMesh();
+			}
+			else if (buddhaColorIndex <= 120)
 			{
 				buddha3.drawMesh();
 			}
-			if (flash_count >= 200 && flash_count < 240)
+			else if (buddhaColorIndex < 180)
 			{
 				buddha2.drawMesh();
 			}
-			if (flash_count >= 240)
+			else
 			{
 				buddha1.drawMesh();
 			}
-			cout << flash_count << endl;*/
-			//buddha材料属性	
-			glColor4fv(mat_color); // 颜色追踪！！！！！！！
-			buddha4.drawMesh();
-			glColor3f(0, 0, 0); // 颜色追踪！！！！！！！
+			cout << buddhaColorIndex << endl;
 		}
 		else
 		{
-			flash_count = 0;
+			buddhaColorIndex = 0;
 			buddha4.drawMesh();
 		}
+		glColor3f(0, 0, 0); // 恢复颜色，防止污染
 		glPopMatrix();
-		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_COLOR_MATERIAL);
 	}
 	glutSwapBuffers();
@@ -808,9 +812,9 @@ void Key(unsigned char key, int x, int y)
 			glDisable(GL_LIGHT0);
 		}
 		break;
-	case 'b':
+	/*case 'b':
 		drawBomb = 1;
-		break;
+		break;*/
 	//case 'g':
 	//	drawBook = 1;
 	//	drawSkyBox = 1;
@@ -917,6 +921,27 @@ void Key(unsigned char key, int x, int y)
 	case 'c':// 下103
 		mat_emission[0] = mat_emission[1] = mat_emission[2] = 0;
 		cout << "mat_emission: " << mat_emission[0] << ", " << mat_emission[1] << ", " << mat_emission[2] << ", " << endl;
+		break;
+	case 'm':
+		cin >> mat_color[0] >> mat_color[1] >> mat_color[2];
+		mat_color[0] /= 255;
+		mat_color[1] /= 255;
+		mat_color[2] /= 255;
+		cout << "mat_color: " << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", " << endl;
+		break;
+	case 'n':
+		for (int i = 0; i < 3; i++)
+		{
+			mat_color[i] *= 1.02f;
+		}
+		cout << "{" << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", 1.0f }," << endl;
+		break;
+	case 'b':
+		for (int i = 0; i < 3; i++)
+		{
+			mat_color[i] /= 1.01f;
+		}
+		cout << "{" << mat_color[0] << ", " << mat_color[1] << ", " << mat_color[2] << ", 1.0f }," << endl;
 		break;
 	default:
 		break;
@@ -1186,12 +1211,12 @@ void myInit()
 
 	buddha4.readFile("obj\\happy_vrip_res4.obj");
 	cout << "load buddha4 finish" << endl;
-	/*buddha3.readFile("obj\\happy_vrip_res3.obj");
-	cout << "load buddha3 finish" << endl;*/
-	/*buddha2.readFile("obj\\happy_vrip_res2.obj");
-	cout << "load buddha2 finish" << endl;*/
-	/*buddha1.readFile("obj\\happy_vrip.obj");
-	cout << "load buddha1 finish" << endl;*/
+	buddha3.readFile("obj\\happy_vrip_res3.obj");
+	cout << "load buddha3 finish" << endl;
+	buddha2.readFile("obj\\happy_vrip_res2.obj");
+	cout << "load buddha2 finish" << endl;
+	buddha1.readFile("obj\\happy_vrip.obj");
+	cout << "load buddha1 finish" << endl;
 
 	//天空盒子
 	CString TexPath(".\\skybox\\mp_cloud9\\cloud9_"); // 云 台  这个好
